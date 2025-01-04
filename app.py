@@ -10,7 +10,7 @@ API_BASE = "https://api.lingyiwanwu.com/v1"
 
 # 初始化 OpenAI 客户端
 client = OpenAI(
-    api_key=os.getenv("01_API_KEY"),
+    api_key=os.getenv("_01_API_KEY"),
     base_url=API_BASE
 )
 
