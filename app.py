@@ -10,7 +10,7 @@ API_BASE = "https://api.lingyiwanwu.com/v1"
 
 # 初始化 OpenAI 客户端
 client = OpenAI(
-    api_key=os.getenv("_01_API_KEY"),
+    api_key=os.getenv("01_API_KEY"),
     base_url=API_BASE
 )
 
@@ -108,4 +108,4 @@ iface = gr.Interface(
 )
 
 # 启动 Gradio 应用
-iface.launch()
+iface.launch(server_name="0.0.0.0", server_port=8080)
