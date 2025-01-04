@@ -2,27 +2,41 @@ from openai import OpenAI
 import base64
 import os
 import gradio as gr
-import psycopg2  # PostgreSQL客户端
+import psycopg2
+from psycopg2 import pool
 from datetime import datetime
+from urllib.parse import urlparse
+
+# External Database URL
+DATABASE_URL = "postgresql://for_hazards_identify_user:1y4VA5kindd2e0angfuxhEDDBsUYGu8T@dpg-ctsit65umphs73fmvr00-a.oregon-postgres.render.com/for_hazards_identify"
+
+url = urlparse(DATABASE_URL)
 
 # API 基础 URL
 API_BASE = "https://api.lingyiwanwu.com/v1"
 
 # 初始化 OpenAI 客户端
 client = OpenAI(
-    api_key=os.getenv("01_API_KEY"),
+    api_key=os.getenv("_01_API_KEY"),
     base_url=API_BASE
 )
 
-# 初始化 PostgreSQL 数据库连接
+# 创建连接池
+connection_pool = pool.SimpleConnectionPool(
+    minconn=1,
+    maxconn=10,
+    dbname=url.path[1:],
+    user=url.username,
+    password=url.password,
+    host=url.hostname,
+    port=url.port
+)
+
 def get_db_connection():
-    return psycopg2.connect(
-        dbname=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST"),
-        port=os.getenv("DB_PORT")
-    )
+    return connection_pool.getconn()
+
+def release_db_connection(conn):
+    connection_pool.putconn(conn)
 
 # 创建数据库表（如果不存在）
 def create_table_if_not_exists():
@@ -39,7 +53,7 @@ def create_table_if_not_exists():
     """)
     conn.commit()
     cur.close()
-    conn.close()
+    release_db_connection(conn)
 
 # 读取本地图像并将其编码为 Base64
 def encode_image_to_base64(image_path):
@@ -90,6 +104,11 @@ def get_chat_completion(client, model, messages):
 
 # 隐患识别函数
 def identify_hazards(image_path, context):
+    # 检查图片大小
+    image_size = os.path.getsize(image_path)  # 获取图片大小（字节）
+    if image_size > 5 * 1024 * 1024:  # 5MB = 5 * 1024 * 1024 字节
+        return "图片大小超过5M，请上传小于5M的图片。"
+    
     # 将图片编码为 Base64
     image_base64 = encode_image_to_base64(image_path)
     
@@ -108,7 +127,7 @@ def identify_hazards(image_path, context):
     )
     conn.commit()
     cur.close()
-    conn.close()
+    release_db_connection(conn)
     
     return result
 
