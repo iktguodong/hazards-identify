@@ -10,7 +10,7 @@ API_BASE = "https://api.lingyiwanwu.com/v1"
 
 # 初始化 OpenAI 客户端
 client = OpenAI(
-    api_key=os.getenv("_01_API_KEY"),
+    api_key=os.getenv("01_API_KEY"),
     base_url=API_BASE
 )
 
@@ -23,6 +23,23 @@ def get_db_connection():
         host=os.getenv("DB_HOST"),
         port=os.getenv("DB_PORT")
     )
+
+# 创建数据库表（如果不存在）
+def create_table_if_not_exists():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS hazard_results (
+            id SERIAL PRIMARY KEY,
+            image_path TEXT NOT NULL,
+            context TEXT,
+            result TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
 
 # 读取本地图像并将其编码为 Base64
 def encode_image_to_base64(image_path):
@@ -106,6 +123,9 @@ iface = gr.Interface(
     title="小安：安全隐患识别",
     description="请上传图片并输入背景信息进行安全生产隐患识别",
 )
+
+# 启动 Gradio 应用前创建表
+create_table_if_not_exists()
 
 # 启动 Gradio 应用
 iface.launch(server_name="0.0.0.0", server_port=8080)
